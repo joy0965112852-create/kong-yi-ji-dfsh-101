@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <!-- interactive-widget=resizes-content：手機跳出鍵盤時，頁面高度會跟著縮小，輸入框不會被鍵盤蓋住 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <title>孔ＯＯ</title>
+    <style>
+        body {
+            font-family: '標楷體', 'BiauKai', 'Kaiti TC', 'DFKai-SB', 'Times New Roman', serif;
+            background-color: #e8dcc4; 
+            background-image: radial-gradient(#d5c3a1 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #2c1e16;
+            display: flex;
+            justify-content: center;
+            align-items: center; 
+            /* 使用 dvh 避免手機瀏覽器的網址列遮擋底部按鈕 */
+            height: 100vh;
+            height: 100dvh; 
+            margin: 0;
+            line-height: 1.8;
+            letter-spacing: 1px;
+            transition: background-color 0.5s, color 0.5s, background-image 0.5s;
+            overflow: hidden; 
+        }
+        
+        #game-container {
+            box-sizing: border-box; 
+            background-color: #f7f1e3;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 900px; 
+            width: 95%;
+            text-align: left; 
+            border: 1px solid #a38c6d;
+            border-left: 15px solid #5c4033; 
+            transition: all 0.5s ease;
+            max-height: 85vh;
+            max-height: 85dvh;
+            overflow-y: auto;
+        }
+
+        /* --- 背景圖片 ---
+           圖片路徑不寫在這裡，統一在下方 JavaScript 最上面的 IMG_DIR 與 BG_IMAGES 設定，
+           程式會自動產生 body.bg-xxx 的背景規則。 */
+
+        body[class^="bg-"] {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            align-items: flex-end; 
+            padding-bottom: 2dvh; 
+        }
+
+        /* 開頭選單強制置中，不置底，防止手機直向時按鈕掉到畫面外 */
+        body.bg-start {
+            align-items: center !important;
+            padding-bottom: 0 !important;
+        }
+        body.bg-start #game-container {
+            max-height: 90dvh !important;
+        }
+
+        body[class^="bg-"] #game-container {
+            background-color: rgba(245, 238, 224, 0.92); 
+            
+            border: none;
+            border-top: 5px solid rgba(92, 64, 51, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
+            
+            width: 98%; 
+            max-width: 1400px; 
+            min-height: 25vh;
+            max-height: 60dvh; 
+            padding: 25px 35px;
+            
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.white-theme {
+            background: #ffffff;
+            background-image: none;
+            align-items: center; 
+            padding-bottom: 0;
+        }
+        body.white-theme #game-container {
+            background-color: #ffffff;
+            border: none;
+            box-shadow: none;
+            color: #aaaaaa;
+            text-align: center;
+            max-height: 100dvh;
+        }
+        body.black-theme {
+            background: #000000;
+            background-image: none;
+            align-items: center; 
+            padding-bottom: 0;
+        }
+        body.black-theme #game-container {
+            background-color: #000000;
+            border: none;
+            box-shadow: none;
+            color: #ff0000;
+            text-align: center;
+            max-height: 100dvh;
+        }
+        
+        h1, h2, h3 {
+            text-align: center;
+            color: inherit;
+            border-bottom: 2px dashed #a38c6d;
+            padding-bottom: 10px;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        body.white-theme h1, body.white-theme h2,
+        body.black-theme h1, body.black-theme h2 { border: none; }
+        
+        input[type="text"] {
+            box-sizing: border-box;
+            width: 200px; 
+            padding: 8px 12px;
+            margin: 0 10px;
+            font-size: 18px;
+            font-family: inherit;
+            border: 1px solid #8b7355;
+            border-radius: 4px;
+            background-color: #fffaf0;
+        }
+        
+        /* --- 按鈕與選項 --- */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: auto;
+            width: 100%;
+        }
+
+        body[class^="bg-"] .button-group {
+            flex-direction: row; 
+            justify-content: center;
+            flex-wrap: wrap; 
+        }
+
+        button {
+            box-sizing: border-box;
+            padding: 12px 15px; 
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #7b5e43;
+            color: #f7f1e3;
+            border: none;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%; 
+        }
+        
+        body[class^="bg-"] .button-group button {
+            flex: 1; 
+            width: auto;
+            background-color: rgba(123, 94, 67, 0.95); 
+            border: 1px solid rgba(247, 241, 227, 0.3);
+        }
+
+        button:hover { background-color: #4a3320; transform: translateY(-2px); }
+        body[class^="bg-"] .button-group button:hover { background-color: rgba(74, 51, 32, 1); }
+
+        .btn-highlight {
+            background-color: #5c4033;
+            border: 2px solid #e8dcc4;
+        }
+
+        /* --- 文字與對話 --- */
+        .story-text {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: left; 
+            word-break: normal; 
+            overflow-wrap: break-word;
+        }
+        
+        .fade-in { animation: fadeIn 0.6s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .dialogue-line {
+            display: none; 
+            margin: 10px 0;
+            padding: 10px 18px;
+            border-radius: 8px;
+            width: fit-content;
+            max-width: 85%;
+            animation: fadeIn 0.5s ease-in-out;
+            text-align: left; 
+        }
+        .dialogue-left {
+            background-color: #e4d5b7;
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        .dialogue-right {
+            background-color: #7b5e43;
+            color: #f7f1e3;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        .dialogue-plain {
+            background-color: transparent;
+            align-self: flex-start;
+            padding: 5px 0;
+            margin-right: auto;
+            border-radius: 0;
+        }
+        .dialogue-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        /* --- 手機直向時的「請旋轉」提示 --- */
+        #rotate-prompt {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 24px;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        /* 提示上的「仍要直向遊玩」按鈕：避免旋轉鎖定時被卡死 */
+        #rotate-prompt button {
+            width: auto;
+            margin-top: 30px;
+            padding: 10px 28px;
+            font-size: 18px;
+        }
+        
+        @media screen and (orientation: portrait) and (max-width: 900px) {
+            html.landscape-locked #rotate-prompt { display: flex; }
+        }
+
+        /* =========================================
+           手機「橫向模式」專屬優化 (高度小於 500px) 
+           縮小 UI 佔比，讓兩側與上方透出背景圖
+           ========================================= */
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+            body[class^="bg-"] {
+                padding-bottom: 10px; 
+            }
+            body[class^="bg-"] #game-container {
+                width: 85%; /* 讓左右露出背景 */
+                max-height: 75dvh; /* 控制高度，保留上方背景 */
+                padding: 12px 20px; /* 大幅減少留白 */
+                border-top: 3px solid rgba(92, 64, 51, 0.8);
+            }
+            .story-text {
+                font-size: 17px; /* 文字微縮 */
+                margin-bottom: 12px;
+            }
+            h1, h2, h3 {
+                font-size: 20px;
+                margin-bottom: 8px;
+                padding-bottom: 5px;
+            }
+            button {
+                padding: 8px 10px;
+                font-size: 16px;
+            }
+            .button-group {
+                gap: 10px; /* 按鈕間距縮小 */
+            }
+            .dialogue-line {
+                margin: 5px 0;
+                padding: 6px 12px;
+                font-size: 16px;
+            }
+        }
+
+        /* 手機直向模式 一般響應式 */
+        @media (max-width: 600px) and (orientation: portrait) {
+            #game-container {
+                width: 95%; 
+                padding: 20px; 
+                border-left: 10px solid #5c4033; 
+            }
+            body[class^="bg-"] #game-container {
+                border-left: none;
+                padding: 15px 20px;
+                max-height: 75dvh; 
+            }
+            body[class^="bg-"] .button-group {
+                flex-direction: column; 
+            }
+            .story-text { font-size: 18px; }
+            input[type="text"] { width: 140px; margin: 5px 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 手機未旋轉時的防呆遮罩 -->
+<div id="rotate-prompt">
+    <div style="font-size: 50px; margin-bottom: 20px;">📱🔄</div>
+    <div>偵測到您正在使用直向螢幕<br><br>請將手機旋轉為「橫向」<br>以獲得最佳的沉浸式遊戲體驗</div>
+    <button onclick="dismissRotatePrompt()">仍要直向遊玩</button>
+</div>
+
+<div id="game-container" class="fade-in">
+</div>
+
+<script>
+    /* =====================================================
+       【圖片設定區】只需要改這裡
+       IMG_DIR：圖片在 GitHub 專案裡的資料夾（相對於這個 index.html）。
+                圖片和 index.html 放在同一層，就寫成 ''；
+                放在 images 資料夾，就寫成 'images/'（結尾一定要有 /）。
+       BG_IMAGES：左邊是場景名稱（不要改），右邊是你上傳到 GitHub 的檔名。
+                  檔名大小寫必須完全一致，副檔名也要一致（.jpeg / .jpg / .png）。
+       ===================================================== */
+    const IMG_DIR = 'images/';
+    const BG_IMAGES = {
+        'start':         'lu_town.jpeg',            /* 開頭：魯鎮與咸亨酒店 */
+        'stage1':        'kongyizi-born.jpeg',      /* 出身選擇：嬰兒 */
+        'poor':          'poor-kongyizi.jpeg',      /* 貧困：鑿壁偷光 */
+        'normal':        'soso-kongyizi.jpeg',      /* 普通：私塾 */
+        'rich':          'rich-kongyizi.jpeg',      /* 富貴：名師教字 */
+        'exam-fail':     'loose-kongyizi.jpeg',     /* 落榜：科舉榜單 */
+        'bribe':         'punish-kongyizi.jpeg',    /* 賄賂：跪在清官面前 */
+        'job-teacher':   'teacher-kongyizi.jpeg',   /* 蒙塾老師 */
+        'job-copy':      'write-kongyizi.jpeg',     /* 抄書 */
+        'job-labor':     'laugh-kongyizi.jpeg',     /* 苦力：碼頭被嘲笑 */
+        'stage4-intro':  'lu_town.jpeg',            /* 第四關：咸亨酒店外觀（與開頭同一張，前後呼應） */
+        'stage4-laugh':  'laugh2-kongyizi.jpeg',    /* 第四關：眾人圍著嘲笑（兩頁對話共用） */
+        'ending-ding-1': 'attack-kongyizi_2.jpeg',  /* 丁舉人結局第一頁：私刑與服辯 */
+        'ending-ding-3': 'pay-kongyizi.jpeg',       /* 丁舉人結局最後一頁：掏出四文大錢 */
+        'ending-baozi':  'attack-kongyizi.jpeg',    /* 偷包子結局：群眾圍觀哄笑 */
+        'ending-beg':    'very_poor-kongyizi.jpeg'  /* 乞討結局 */
+    };
+
+    function imagePath(fileName) {
+        /* encodeURI 可處理檔名裡的空格或中文 */
+        return encodeURI(IMG_DIR + fileName);
+    }
+
+    /* 依 BG_IMAGES 自動產生 body.bg-xxx 的背景規則 */
+    (function injectBackgroundStyles() {
+        const css = Object.keys(BG_IMAGES).map(function (key) {
+            return 'body.bg-' + key + ' { background-image: url("' + imagePath(BG_IMAGES[key]) + '"); }';
+        }).join('\n');
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.appendChild(style);
+    })();
+
+    /* 預載全部背景圖，避免切換關卡時才開始下載而空白。
+       網址後面加 ?debug 可以在手機上看到哪些圖片沒載入成功。 */
+    const preloadedImages = [];
+
+    function preloadBackgrounds() {
+        /* 不同場景可能共用同一張圖，只載入一次 */
+        const paths = Array.from(new Set(Object.keys(BG_IMAGES).map(function (key) {
+            return imagePath(BG_IMAGES[key]);
+        })));
+        const missing = [];
+        let finished = 0;
+
+        function checkDone() {
+            finished++;
+            if (finished === paths.length && location.search.indexOf('debug') !== -1) {
+                if (missing.length) {
+                    alert('找不到這些圖片，請檢查資料夾與檔名：\n' + missing.join('\n'));
+                } else {
+                    alert('背景圖 ' + paths.length + ' 張都載入成功');
+                }
+            }
+        }
+
+        paths.forEach(function (path) {
+            const img = new Image();
+            img.onload = function () {
+                if (img.decode) img.decode().catch(function () {});
+                checkDone();
+            };
+            img.onerror = function () {
+                console.warn('找不到圖片：' + path);
+                missing.push(path);
+                checkDone();
+            };
+            img.src = path;
+            preloadedImages.push(img); /* 保持引用，避免被回收 */
+        });
+    }
+
+    window.addEventListener('load', preloadBackgrounds);
+
+    let playerName = "";
+    let familyBackground = "";
+    let dialogueIndex = 0;
+    const container = document.getElementById('game-container');
+
+    /* 玩家輸入的名字會放進 innerHTML，先轉義，避免 < > & 等符號讓畫面壞掉 */
+    function escapeHTML(str) {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function resetTheme() {
+        document.body.className = '';
+    }
+
+    function renderScreen(content) {
+        container.innerHTML = `<div class="fade-in" style="display:flex; flex-direction:column; height:100%;">${content}</div>`;
+        container.scrollTop = 0; 
+    }
+
+    /* 啟動全螢幕與橫向鎖定（必須由使用者點擊觸發） */
+    function enableFullscreen() {
+        document.documentElement.classList.add('landscape-locked');
+        const docElm = document.documentElement;
+        
+        if (docElm.requestFullscreen) {
+            docElm.requestFullscreen().catch(err => console.log(err));
+        } else if (docElm.webkitRequestFullscreen) { 
+            docElm.webkitRequestFullscreen();
+        } else if (docElm.msRequestFullscreen) { 
+            docElm.msRequestFullscreen();
+        }
+
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(err => console.log("Orientation lock failed: ", err));
+        }
+    }
+
+    /* 離開全螢幕與橫向鎖定 */
+    function leaveFullscreenMode() {
+        document.documentElement.classList.remove('landscape-locked');
+        const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fsElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+        if (screen.orientation && screen.orientation.unlock) {
+            try { screen.orientation.unlock(); } catch (e) {}
+        }
+    }
+
+    /* 「仍要直向遊玩」：關掉請旋轉的遮罩 */
+    function dismissRotatePrompt() {
+        document.documentElement.classList.remove('landscape-locked');
+    }
+
+    /* 第 1 頁：先選遊玩模式（全螢幕需要由這個按鈕的點擊來觸發） */
+    function initGame() {
+        leaveFullscreenMode();
+        resetTheme();
+        document.body.classList.add('bg-start'); 
+        
+        renderScreen(`
+            <h1>孔ＯＯ</h1>
+            <div class="story-text" style="text-align: center;">
+                請先選擇遊玩方式
+            </div>
+            <div class="button-group" style="flex-direction: row; flex-wrap: wrap;">
+                <button onclick="chooseMode(false)" style="flex: 1;">一般模式遊玩</button>
+                <button onclick="chooseMode(true)" class="btn-highlight" style="flex: 1;">📱 全螢幕橫式 (手機推薦)</button>
+            </div>
+        `);
+    }
+
+    function chooseMode(useFullscreen) {
+        if (useFullscreen) {
+            enableFullscreen();
+        } else {
+            document.documentElement.classList.remove('landscape-locked');
+        }
+        nameScreen();
+    }
+
+    /* 第 2 頁：選完模式之後才輸入名字（此時畫面已是最終的橫式或一般狀態） */
+    function nameScreen() {
+        resetTheme();
+        document.body.classList.add('bg-start'); 
+
+        renderScreen(`
+            <h2>請輸入你的名字</h2>
+            <div class="story-text" style="text-align: center;">
+                孔 <input type="text" id="nameInput" placeholder="輸入單名或雙名" autocomplete="off" autocapitalize="off" enterkeyhint="go">
+            </div>
+            <div class="story-text" style="text-align: center;">
+                「歡迎來到清末的魯鎮。在這個時代，『萬般皆下品，惟有讀書高』。<br>你的一生，將由你的選擇決定……」
+            </div>
+            <div class="button-group">
+                <button onclick="submitName()">開始遊戲</button>
+            </div>
+        `);
+
+        const input = document.getElementById('nameInput');
+
+        /* Enter 送出；輸入中文時按 Enter 是在選字，不能當成送出 */
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+                submitName();
+            }
+        });
+
+        /* 手機鍵盤彈出後，把輸入框捲到可見位置 */
+        input.addEventListener('focus', function () {
+            setTimeout(function () {
+                input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }, 300);
+        });
+    }
+
+    function submitName() {
+        const raw = document.getElementById('nameInput').value.trim();
+        playerName = raw ? escapeHTML(raw) : "某";
+        stage1();
+    }
+
+    function stage1() {
+        resetTheme();
+        document.body.classList.add('bg-stage1');
+        
+        renderScreen(`
+            <h2>出身與啟蒙</h2>
+            <div class="story-text">
+                孔${playerName}，請選擇你的最初開局：
+            </div>
+            <div class="button-group">
+                <button onclick="stage1_result('poor')">貧困家庭</button>
+                <button onclick="stage1_result('normal')">普通家庭</button>
+                <button onclick="stage1_result('rich')">富貴家庭</button>
+            </div>
+        `);
+    }
+
+    function stage1_result(type) {
+        resetTheme();
+        document.body.classList.add('bg-' + type);
+        
+        familyBackground = type;
+        let descText = "";
+        
+        if (type === 'poor') {
+            descText = "你家徒四壁，連買燈油的錢都沒有。你選擇鑿壁偷光、囊螢映雪，靠著鄰居微弱的燈光苦讀四書五經。因為長期營養不良，你的身材高大卻面黃肌瘦。";
+        } else if (type === 'normal') {
+            descText = "家裡開個小作坊，把你送進鎮上的平民私塾。你每天跟著老先生搖頭晃腦地背誦「君子固窮」。";
+        } else if (type === 'rich') {
+            descText = "你是當地望族之子，家裡請了名師到宅邸授課，你從小用上好的宣紙練字，寫得一筆好字。";
+        }
+
+        renderScreen(`
+            <div class="story-text">${descText}</div>
+            <div class="button-group">
+                <button onclick="stage2_result()">歲月流逝，前往科舉考場</button>
+            </div>
+        `);
+    }
+
+    function stage2_result() {
+        resetTheme();
+        document.body.classList.add('bg-exam-fail'); 
+
+        const intro = "你滿懷希望地去參加院試，只要榜上有名，就能「進學」成為秀才。榜單公布那天，你在人群中尋找自己的名字……<br><br>";
+        let descText = "";
+        if (familyBackground === 'poor') {
+            descText = intro + "已經飢腸轆轆的你，使盡全力在榜單上一個字一個字地找，卻始終找不到自己的名字，名落孫山。";
+        } else {
+            descText = intro + "你的八股文不合考官胃口，即使你使盡全力在榜單上反覆尋找，還是找不到自己的名字，名落孫山。";
+        }
+
+        let choicesHTML = `
+            <div class="button-group">
+                <button onclick="stage3()">不甘心，繼續苦讀</button>
+                <button onclick="showJobs()">認清現實，另尋他路</button>
+        `;
+        if (familyBackground === 'rich') {
+            choicesHTML += `<button onclick="bribe_result()">嘗試賄賂考官</button>`;
+        }
+        choicesHTML += `</div>`;
+
+        renderScreen(`
+            <h2>命運的試煉——科舉考試</h2>
+            <div class="story-text">
+                ${descText}
+            </div>
+            ${choicesHTML}
+        `);
+    }
+
+    function bribe_result() {
+        resetTheme();
+        document.body.classList.add('bg-bribe'); 
+
+        renderScreen(`
+            <div class="story-text">
+                你私下送上厚禮，偏偏遇到百年難得一見的清官。他仍有不忍之心，只判你終身不得參加科舉。
+            </div>
+            <div class="button-group">
+                <button onclick="showJobs()">認清現實，另尋他路</button>
+            </div>
+        `);
+    }
+
+    function stage3() {
+        resetTheme();
+        document.body.classList.add('bg-exam-fail'); 
+
+        let descText = "";
+        if (familyBackground === 'poor') {
+            descText = "你為了準備科舉，卻買不起昂貴的書籍與紙筆，於是鋌而走險去偷書。被抓到後，你堅稱「竊書不能算偷」，卻還是遭到眾人毒打。你雖保住性命，卻落得滿身是傷，最終只能流落街頭。";
+        } else if (familyBackground === 'normal') {
+            descText = "考到三十歲依然是個童生，家裡的小作坊被你拖垮破產，父母將你趕出家門。";
+        } else if (familyBackground === 'rich') {
+            descText = "你靠著家底深厚，一路考到了五十多歲，卻依然只是個童生。因為你平時好喝懶做，除了背誦八股文之外毫無謀生技能，隨著家族長輩凋零，萬貫家財終究被你吃喝揮霍殆盡。曾經奉承你的親友紛紛將你掃地出門，你從闊少爺變成了一無所有的落魄老童生。";
+        }
+
+        renderScreen(`
+            <h2>命運的岔路</h2>
+            <div class="story-text">${descText}</div>
+            <div class="button-group">
+                <button onclick="showJobs()">另尋他路</button>
+            </div>
+        `);
+    }
+
+    function showJobs() {
+        resetTheme(); 
+        renderScreen(`
+            <h2>另尋他路</h2>
+            <div class="story-text">你必須找份工作養活自己，你會選擇：</div>
+            <div class="button-group">
+                <button onclick="jobResult('teacher')">勉強當上蒙塾老師</button>
+                <button onclick="jobResult('copy')">發揮專長，替人抄書</button>
+                <button onclick="jobResult('labor')">放下身段，做苦力</button>
+            </div>
+        `);
+    }
+
+    function jobResult(jobType) {
+        resetTheme();
+        document.body.classList.add('bg-job-' + jobType); 
+
+        let resultText = "";
+        if (jobType === 'teacher') {
+            resultText = "你堅持教小孩「回字有四種寫法」，家長認為你教的東西對生活毫無幫助。加上你名聲實在壞得一敗塗地，最終被辭退。";
+        } else if (jobType === 'copy') {
+            resultText = "你寫得一筆好字，一開始生意不錯。但你自認是「讀書人」，不屑抄寫通俗小說，只肯抄古籍。加上你好喝懶做，常常把東家的筆墨紙硯變賣換酒喝，名聲臭了，再也沒人找你。";
+        } else if (jobType === 'labor') {
+            resultText = "你決定放下讀書人的身段，把長衫下襬紮在腰間，去和短衣幫一起扛麻袋。但你四體不勤，根本扛不動；更慘的是，短衣幫的工人嘲笑你：「喲！這不是那個整天穿長衫的讀書人嗎？讀書人怎麼來跟我們搶飯吃？」你發現自己融入不了底層，卻也被上層拋棄。你受不了屈辱，選擇離開，卻始終沒有脫下那件又髒又破的長衫——那是你僅存的體面。";
+        }
+
+        renderScreen(`
+            <div class="story-text">${resultText}</div>
+            <div class="button-group">
+                <button onclick="stage4_intro()">繼續</button>
+            </div>
+        `);
+    }
+
+    function stage4_intro() {
+        resetTheme();
+        document.body.classList.add('bg-stage4-intro');
+        renderScreen(`
+            <h2>最後的掙扎</h2>
+            <div class="story-text">
+                孔${playerName}，沒有謀生能力，只能乞討或趁機偷竊。<br><br>
+                穿著長衫、滿臉花白，且夾帶傷痕的你，步履蹣跚，已經好幾天沒吃飯了，肚子餓得發疼，經過咸亨酒店時，聞到陣陣酒香與茴香豆的味道，總讓你垂涎三尺。
+            </div>
+            <div class="button-group">
+                <button onclick="stage4_dialogue_1()">【下一頁】</button>
+            </div>
+        `);
+    }
+
+    function stage4_dialogue_1() {
+        resetTheme();
+        document.body.classList.add('bg-stage4-laugh');
+        dialogueIndex = 0;
+        renderScreen(`
+            <div class="dialogue-container" id="dialogueBox1">
+                <div class="dialogue-line dialogue-left">「哎呀！這不是那個誰？」</div>
+                <div class="dialogue-line dialogue-left">「孔……孔什麼來著？」</div>
+                <div class="dialogue-line dialogue-left">某人看著旁邊的描紅紙，笑了一聲說：「上大人孔乙己……就叫孔乙己吧。」</div>
+                <div class="dialogue-line dialogue-plain">眾人一齊大笑。</div>
+            </div>
+            <div class="button-group">
+                <button id="nextBtn1" onclick="showNextDialogue1()">【浮現對話】</button>
+            </div>
+        `);
+        showNextDialogue1();
+    }
+
+    function showNextDialogue1() {
+        const lines = document.querySelectorAll('#dialogueBox1 .dialogue-line');
+        if (dialogueIndex < lines.length) {
+            lines[dialogueIndex].style.display = 'block';
+            dialogueIndex++;
+            container.scrollTop = container.scrollHeight; 
+            if (dialogueIndex === lines.length) {
+                const btn = document.getElementById('nextBtn1');
+                btn.innerText = "【下一頁】";
+                btn.onclick = stage4_dialogue_2;
+            }
+        }
+    }
+
+    function stage4_dialogue_2() {
+        resetTheme();
+        document.body.classList.add('bg-stage4-laugh');
+        dialogueIndex = 0;
+        renderScreen(`
+            <div class="dialogue-container" id="dialogueBox2">
+                <div class="dialogue-line dialogue-right">「我是孔${playerName}！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己，你臉上又添上新傷疤了！」</div>
+                <div class="dialogue-line dialogue-right">「我是……我是孔${playerName}！不是孔乙己！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己，你當真認識字麼？你怎的連半個秀才也撈不到呢？」</div>
+                <div class="dialogue-line dialogue-right">「我、我……不是孔乙己！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己！還欠十九個錢呢！」</div>
+                <div class="dialogue-line dialogue-right">「……」</div>
+            </div>
+            <div class="button-group">
+                <button id="nextBtn2" onclick="showNextDialogue2()">【浮現對話】</button>
+            </div>
+        `);
+        showNextDialogue2();
+    }
+
+    function showNextDialogue2() {
+        const lines = document.querySelectorAll('#dialogueBox2 .dialogue-line');
+        if (dialogueIndex < lines.length) {
+            lines[dialogueIndex].style.display = 'block';
+            dialogueIndex++;
+            container.scrollTop = container.scrollHeight; 
+            if (dialogueIndex === lines.length) {
+                const btn = document.getElementById('nextBtn2');
+                btn.innerText = "【下一頁】";
+                btn.onclick = stage4_identity;
+            }
+        }
+    }
+
+    function stage4_identity() {
+        document.body.className = 'white-theme';
+        renderScreen(`
+            <div class="story-text" style="font-size: 32px; font-weight: bold; margin-top: 20vh; text-align: center;">
+                「我……我是誰？」
+            </div>
+            <div class="button-group" style="margin-top: auto;">
+                <button onclick="stage4_choices()">【下一頁】</button>
+            </div>
+        `);
+    }
+
+    function stage4_choices() {
+        resetTheme();
+        renderScreen(`
+            <div class="story-text">
+                孔乙己，你現在已經沒有現錢，但酒店裡的十九個錢還欠著，你又快要走向絕路，你會怎麼做？
+            </div>
+            <div class="button-group">
+                <button onclick="ending_ding_1()">去丁舉人家偷東西</button>
+                <button onclick="ending_baozi()">去偷小販的包子</button>
+                <button onclick="ending_beg_1()">堅持氣節，上街乞討</button>
+            </div>
+        `);
+    }
+
+    function ending_ding_1() {
+        resetTheme();
+        document.body.classList.add('bg-ending-ding-1'); 
+
+        renderScreen(`
+            <div class="story-text">
+                你潛入丁舉人家。被發現後，丁舉人動用私刑，寫了服辯，還打了大半夜，你的腿被打折了。
+            </div>
+            <div class="button-group">
+                <button onclick="ending_ding_2()">【下一頁】</button>
+            </div>
+        `);
+    }
+
+    function ending_ding_2() {
+        dialogueIndex = 0;
+        renderScreen(`
+            <div class="story-text">
+                你在初冬的一個午後，用手爬著去買了最後一碗溫酒。
+            </div>
+            <div class="dialogue-container" id="dialogueBox3">
+                <div class="dialogue-line dialogue-left">「孔乙己麼？你還欠十九個錢呢！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己，你又偷了東西了！」</div>
+                <div class="dialogue-line dialogue-right">「不要取笑！」</div>
+                <div class="dialogue-line dialogue-left">「取笑？要是不偷，怎麼會打斷腿？」</div>
+                <div class="dialogue-line dialogue-right">「跌斷，跌，跌……」</div>
+            </div>
+            <div class="button-group">
+                <button id="nextBtn3" onclick="showNextDialogue3()">【浮現對話】</button>
+            </div>
+        `);
+        showNextDialogue3();
+    }
+
+    function showNextDialogue3() {
+        const lines = document.querySelectorAll('#dialogueBox3 .dialogue-line');
+        if (dialogueIndex < lines.length) {
+            lines[dialogueIndex].style.display = 'block';
+            dialogueIndex++;
+            container.scrollTop = container.scrollHeight; 
+            if (dialogueIndex === lines.length) {
+                const btn = document.getElementById('nextBtn3');
+                btn.innerText = "【下一頁】";
+                btn.onclick = ending_ding_3;
+            }
+        }
+    }
+
+    function ending_ding_3() {
+        resetTheme();
+        document.body.classList.add('bg-ending-ding-3'); 
+
+        renderScreen(`
+            <div class="story-text">
+                你用充滿泥濘的手，顫抖地掏出四文大錢，用盡力氣放在夥計手裡，隨後慢慢的、慢慢的消失在充滿歡笑聲的世界。
+            </div>
+            <div class="button-group">
+                <button onclick="initGame()">重新開始</button>
+            </div>
+        `);
+    }
+
+    function ending_baozi() {
+        resetTheme();
+        document.body.classList.add('bg-ending-baozi'); 
+
+        renderScreen(`
+            <div class="story-text">
+                你被小販抓住，挨了狠狠的幾下。周圍的群眾不但沒有同情你，反而圍成一圈指指點點、哄笑看熱鬧，沒有一個人上前勸阻。你拖著滿身傷痕離開，隔天被發現凍死在街頭。
+            </div>
+            <div class="button-group">
+                <button onclick="initGame()">重新開始</button>
+            </div>
+        `);
+    }
+
+    function ending_beg_1() {
+        resetTheme();
+        document.body.classList.add('bg-ending-beg'); 
+
+        renderScreen(`
+            <div class="story-text">
+                你穿著破長衫在街頭乞討，但因為你總是滿口「之乎者也」，路人覺得你是個瘋子，沒人願意施捨給你。
+            </div>
+            <div class="button-group">
+                <button onclick="ending_beg_2()">【下一頁】</button>
+            </div>
+        `);
+    }
+
+    function ending_beg_2() {
+        dialogueIndex = 0;
+        renderScreen(`
+            <div class="dialogue-container" id="dialogueBox4">
+                <div class="dialogue-line dialogue-left">「孔乙己麼？你還欠十九個錢呢！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己，你臉上又添上新傷疤了！」</div>
+                <div class="dialogue-line dialogue-left">「孔乙己，你當真認識字麼？你怎的連半個秀才也撈不到呢？」</div>
+            </div>
+            <div class="button-group">
+                <button id="nextBtn4" onclick="showNextDialogue4()">【浮現對話】</button>
+            </div>
+        `);
+        showNextDialogue4();
+    }
+
+    function showNextDialogue4() {
+        const lines = document.querySelectorAll('#dialogueBox4 .dialogue-line');
+        if (dialogueIndex < lines.length) {
+            lines[dialogueIndex].style.display = 'block';
+            dialogueIndex++;
+            container.scrollTop = container.scrollHeight; 
+            if (dialogueIndex === lines.length) {
+                const btn = document.getElementById('nextBtn4');
+                btn.innerText = "【下一頁】";
+                btn.onclick = ending_beg_3;
+            }
+        }
+    }
+
+    function ending_beg_3() {
+        renderScreen(`
+            <div class="story-text">
+                下著雨的夜晚，你餓死在眾人的笑聲外、無窮的寂靜裡。
+            </div>
+            <div class="button-group">
+                <button onclick="ending_beg_4()">【下一頁】</button>
+            </div>
+        `);
+    }
+
+    function ending_beg_4() {
+        document.body.className = 'black-theme';
+        leaveFullscreenMode();
+
+        renderScreen(`
+            <div class="story-text" style="font-size: 32px; font-weight: bold; margin-top: 20vh; text-align: center;">
+                「還欠十九個錢呢！」
+            </div>
+            <div class="button-group" style="margin-top: 20vh;">
+                <button onclick="initGame()">重新開始</button>
+            </div>
+        `);
+    }
+
+    initGame();
+</script>
+</body>
+</html>
